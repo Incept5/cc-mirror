@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # ===========================================
+  # Code Review Bot Worker
+  # ===========================================
+  code-review-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      # Authentication - Claude Max subscription
+      - ANTHROPIC_AUTH_TOKEN=${ANTHROPIC_AUTH_TOKEN}
+
+      # Git/GitHub credentials
+      - SSH_PRIVATE_KEY=${SSH_PRIVATE_KEY}
+      - GH_TOKEN=${GH_TOKEN}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL:-code-review-bot@example.com}
+      - GIT_USER_NAME=${GIT_USER_NAME:-Code Review Bot}
+
+      # Database connection
+      - DATABASE_URL=postgres://orchestration:orchestration@db:5432/orchestration
+
+      # Worker configuration
+      - WORKER_COUNT=${WORKER_COUNT:-1}
+      - WORKER_ID_PREFIX=code-review
+      - POLL_INTERVAL_MS=${POLL_INTERVAL_MS:-5000}
+
+      # Workspace management
+      - WORKSPACE_BASE=/workspace
+      - CLEANUP_AFTER_COMPLETE=${CLEANUP_AFTER_COMPLETE:-true}
+
+      # mclaude configuration
+      - MCLAUDE_VARIANT=mc
+      - MCLAUDE_TIMEOUT_MS=${MCLAUDE_TIMEOUT_MS:-1800000}
+
+    volumes:
+      # Persistent workspace for debugging (optional)
+      - workspace:/workspace
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+  # ===========================================
+  # PostgreSQL Database
+  # ===========================================
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: orchestration
+      POSTGRES_USER: orchestration
+      POSTGRES_PASSWORD: orchestration
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Initialize database schema
+      - ../shared/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orchestration -d orchestration"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  workspace:
+  pgdata:
+
+# ===========================================
+# Usage:
+#
+# 1. Copy .env.example to .env and fill in credentials
+# 2. Build the base image first:
+#    cd ../shared && docker build -f base.Dockerfile -t mclaude-base:latest .
+# 3. Start the stack:
+#    docker-compose up -d
+# 4. Insert a review request:
+#    psql $DATABASE_URL -c "INSERT INTO orchestration_requests (repo_url, prompt) VALUES ('git@github.com:org/repo.git', 'Review the latest PR changes');"
+# 5. Watch the results:
+#    docker-compose logs -f code-review-bot
+# ===========================================
