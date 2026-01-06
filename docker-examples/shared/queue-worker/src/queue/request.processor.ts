@@ -86,7 +86,18 @@ export class RequestProcessor implements OnModuleInit {
       }
 
       // 3. Execute mclaude (with metadata injected as env vars)
-      const result = await this.mclaude.execute(workDir, request.prompt, request.config, request.metadata);
+      const result = await this.mclaude.execute(
+        workDir,
+        request.prompt,
+        request.config,
+        request.metadata,
+        // Eve-horizon auth context
+        {
+          orgId: request.orgId,
+          userId: request.userId,
+          requestId: request.id,
+        }
+      );
       const durationMs = Date.now() - startTime;
 
       // 4. Extract artifacts from output

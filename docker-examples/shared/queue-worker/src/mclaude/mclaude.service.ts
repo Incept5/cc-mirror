@@ -29,6 +29,7 @@ export class MclaudeService {
     prompt: string,
     requestConfig?: RequestConfig,
     metadata?: RequestMetadata,
+    authContext?: { orgId?: string; userId?: string; requestId?: string },
   ): Promise<MclaudeResult> {
     const timeoutMs = requestConfig?.timeout_minutes
       ? requestConfig.timeout_minutes * 60 * 1000
@@ -60,6 +61,11 @@ export class MclaudeService {
           ...(requestConfig?.model && {
             ANTHROPIC_DEFAULT_MODEL: this.getModelId(requestConfig.model),
           }),
+          // Eve-horizon auth context for multi-tenancy and CLI tools
+          // These enable tenant isolation and request tracing in containerized deployments
+          ...(authContext?.orgId && { EVE_ORG_ID: authContext.orgId }),
+          ...(authContext?.userId && { EVE_USER_ID: authContext.userId }),
+          ...(authContext?.requestId && { EVE_REQUEST_ID: authContext.requestId }),
         },
         // Capture all output
         all: true,

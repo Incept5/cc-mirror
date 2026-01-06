@@ -27,6 +27,10 @@ CREATE TABLE orchestration_requests (
     -- Request-specific metadata (credentials, URLs, etc.) - injected as env vars
     metadata        JSONB NOT NULL DEFAULT '{}'::jsonb,
 
+    -- Eve-horizon multi-tenancy (optional for basic queue usage)
+    org_id          UUID,
+    user_id         UUID,
+
     -- Worker claiming
     claimed_at      TIMESTAMPTZ,
     claimed_by      TEXT,                    -- Worker ID that claimed this request

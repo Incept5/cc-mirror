@@ -34,6 +34,13 @@ export class Request {
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt!: Date;
 
+  // eve-horizon multi-tenancy: organization and user ownership
+  @Column({ name: 'org_id', type: 'text', nullable: true })
+  orgId!: string | null;
+
+  @Column({ name: 'user_id', type: 'text', nullable: true })
+  userId!: string | null;
+
   @Column({
     type: 'text',
     default: 'pending',
